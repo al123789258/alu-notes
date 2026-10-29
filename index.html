@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>阿录</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f5f7fa">
+<style>
+* {box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,sans-serif}
+body {transition: all 0.3s ease;}
+
+.theme-white {
+  background: #ffffff;
+  color: #222222;
+}
+.theme-white header {background: #f5f7fa; border-bottom:1px solid #eee;}
+.theme-white .tool-bar {background: #ffffff; border-bottom:1px solid #eee;}
+.theme-white .panel-left,.theme-white .work-area {background:#ffffff;border:1px solid #e8e8e8;}
+.theme-white .desc-block {border:1px dashed #cccccc;}
+
+.theme-grey {
+  background: #f2f3f5;
+  color: #1f1f1f;
+}
+.theme-grey header {background: #eef0f3;}
+.theme-grey .tool-bar {background: #f7f8fa;}
+.theme-grey .panel-left,.theme-grey .work-area {background:#fdfdfd;border:1px solid #dcdde0;}
+.theme-grey .desc-block {border:1px dashed #b9bbbe;}
+
+.theme-blue {
+  background: #f4f7fa;
+  color: #202b38;
+}
+.theme-blue header {background: #e8eff8;}
+.theme-blue .tool-bar {background: #f0f5fb;}
+.theme-blue .panel-left,.theme-blue .work-area {background:#ffffff;border:1px solid #d8e4f2;}
+.theme-blue .desc-block {border:1px dashed #9fb8d8;}
+
+header {padding:14px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+h1 {font-size:20px;font-weight:600;color:#333}
+.header-desc {font-size:14px;color:#666}
+
+.tool-bar {display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid #eee;align-items:center}
+button,select,input[type="color"] {
+  padding:8px 10px;
+  border:1px solid #ddd;
+  border-radius:5px;
+  background:#fff;
+  cursor:pointer;
+  font-size:14px;
+  transition:0.2s;
+}
+button:hover {background:#f0f0f0;}
+.row-wrap {display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 6px}
+
+.main-wrap {display:flex;gap:12px;padding:12px;flex-direction:column}
+@media(min-width:768px){
+  .main-wrap{flex-direction:row;height:calc(100vh - 140px)}
+}
+.panel-left {width:100%;padding:14px;border-radius:8px;overflow:auto}
+@media(min-width:768px){
+  .panel-left{width:240px}
+}
+.panel-left h4 {margin-bottom:10px;color:#444;font-size:15px}
+.panel-left p {font-size:13px;line-height:1.7;color:#666}
+
+.work-area {flex:1;padding:16px;border-radius:8px;overflow:auto}
+#editor {min-height:600px;outline:none;line-height:1.7;font-size:16px}
+@media(max-width:767px){
+  #editor{min-height:450px}
+}
+
+table {border-collapse:collapse;margin:12px 0;width:auto;}
+td,th {border:1px solid #c9c9c9;padding:8px;min-width:60px;transition:0.2s}
+
+.desc-block {padding:12px;margin:12px 0;border-radius:6px;min-height:40px}
+.desc-title {font-weight:bold;margin-bottom:6px;display:block;}
+
+#editor img {
+  max-width:100%;
+  resize:both;
+  overflow:auto;
+  cursor:se-resize;
+  border:1px solid transparent;
+}
+#editor img:hover {
+  border:1px solid #aaa;
+}
+
+.modal {position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:999;padding:16px}
+.modal-box {background:#fff;padding:16px;border-radius:10px;width:100%;max-width:560px}
+#cropCanvas {width:100%;max-width:520px}
+
+#imgInput, #txtInput {display:none}
+</style>
+</head>
+
+<body class="theme-white">
+<header>
+  <h1>阿录</h1>
+  <span class="header-desc">PWA极简图文表格记录工具</span>
+</header>
+
+<div class="tool-bar">
+  <div class="row-wrap">
+    <span>主题</span>
+    <button onclick="setTheme('theme-white')">纯白</button>
+    <button onclick="setTheme('theme-grey')">护眼灰</button>
+    <button onclick="setTheme('theme-blue')">静谧蓝</button>
+  </div>
+
+  <select id="fontFamily">
+    <option value="system-ui">默认字体</option>
+    <option value="SimSun">宋体</option>
+    <option value="SimHei">黑体</option>
+    <option value="KaiTi">楷体</option>
+    <option value="Microsoft YaHei">微软雅黑</option>
+  </select>
+  <select id="fontSize">
+    <option value="12px">12px</option>
+    <option value="14px">14px</option>
+    <option value="16px" selected>16px</option>
+    <option value="18px">18px</option>
+    <option value="20px">20px</option>
+    <option value="24px">24px</option>
+  </select>
+  <input type="color" id="fontColor" value="#000000" title="字体颜色">
+  <input type="color" id="cellBg" value="#ffffff" title="单元格底色">
+
+  <button onclick="formatCmd('bold')">加粗</button>
+  <button onclick="formatCmd('italic')">斜体</button>
+  <button onclick="formatCmd('underline')">下划线</button>
+  <button onclick="formatCmd('undo')">撤销</button>
+  <button onclick="formatCmd('redo')">重做</button>
+
+  <div class="row-wrap">
+    <button onclick="insertTable()">新建表格</button>
+    <button onclick="tableAddRow()">加行</button>
+    <button onclick="tableDelRow()">删行</button>
+    <button onclick="tableAddCol()">加列</button>
+    <button onclick="tableDelCol()">删列</button>
+  </div>
+
+  <button onclick="document.getElementById('imgInput').click()">插入图片</button>
+  <input type="file" id="imgInput" accept="image/*" onchange="openCrop(this)">
+  <button onclick="addDescBlock()">新增描述区</button>
+  <button onclick="document.getElementById('txtInput').click()">导入TXT</button>
+  <input type="file" id="txtInput" accept=".txt" onchange="importTxt(this)">
+
+  <div class="row-wrap">
+    <button onclick="saveLocal()">保存</button>
+    <button onclick="loadLocal()">读取</button>
+    <button onclick="clearAll()">清空</button>
+    <button onclick="exportPDF()">导出PDF</button>
+    <button onclick="exportImg()">导出图片</button>
+  </div>
+</div>
+
+<div class="main-wrap">
+  <div class="panel-left">
+    <h4>📌 操作提示</h4>
+    <p>1. 选中文字修改字体颜色样式<br>
+    2. 表格随时增删行列，单元格上色<br>
+    3. 图片裁剪后插入，可拖动缩放<br>
+    4. 描述区支持自定义标题<br>
+    5. 支持导入TXT文本<br>
+    6. 可添加到桌面离线使用</p>
+  </div>
+  <div class="work-area">
+    <div id="editor" contenteditable="true"></div>
+  </div>
+</div>
+
+<div class="modal" id="cropModal">
+  <div class="modal-box">
+    <canvas id="cropCanvas"></canvas>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center">
+      <button onclick="confirmCrop()">确认插入</button>
+      <button onclick="closeCrop()">取消</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+const editor = document.getElementById('editor');
+const cropModal = document.getElementById('cropModal');
+const canvas = document.getElementById('cropCanvas');
+const ctx = canvas.getContext('2d');
+let tempImg = null;
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js');
+}
+
+function setTheme(themeName){
+  document.body.className = themeName;
+}
+
+function formatCmd(cmd){
+  document.execCommand(cmd,false,null);
+  editor.focus();
+}
+
+document.getElementById('fontFamily').onchange=e=>{
+  document.execCommand('fontName',false,e.target.value);editor.focus();
+};
+document.getElementById('fontSize').onchange=e=>{
+  document.execCommand('fontSize',false,e.target.value);editor.focus();
+};
+document.getElementById('fontColor').onchange=e=>{
+  document.execCommand('foreColor',false,e.target.value);editor.focus();
+};
+document.getElementById('cellBg').onchange=e=>{
+  document.execCommand('hiliteColor',false,e.target.value);editor.focus();
+};
+
+function insertTable(){
+  const rows = prompt("表格行数","3");
+  const cols = prompt("表格列数","4");
+  if(!rows||!cols)return;
+  let html="<table>";
+  for(let i=0;i<rows;i++){
+    html+="<tr>";
+    for(let j=0;j<cols;j++) html+="<td>&nbsp;</td>";
+    html+="</tr>";
+  }
+  html+="</table><br>";
+  document.execCommand('insertHTML',false,html);
+}
+function tableAddRow(){formatCmd('insertRow');}
+function tableDelRow(){formatCmd('deleteRow');}
+function tableAddCol(){formatCmd('insertColumn');}
+function tableDelCol(){formatCmd('deleteColumn');}
+
+function openCrop(input){
+  const file = input.files[0];if(!file)return;
+  const reader = new FileReader();
+  reader.onload=e=>{
+    tempImg = new Image();
+    tempImg.src = e.target.result;
+    tempImg.onload = ()=>{
+      canvas.width = Math.min(tempImg.width, 540);
+      canvas.height = Math.min(tempImg.height, 540);
+      ctx.drawImage(tempImg,0,0,canvas.width,canvas.height);
+      cropModal.style.display='flex';
+    }
+  }
+  reader.readAsDataURL(file);
+  input.value=null;
+}
+function confirmCrop(){
+  const dataUrl = canvas.toDataURL("image/png");
+  const imgHtml = `<img src="${dataUrl}" style="max-width:100%;margin:8px 0;"><br>`;
+  document.execCommand('insertHTML',false,imgHtml);
+  closeCrop();
+}
+function closeCrop(){
+  cropModal.style.display='none';tempImg=null;
+}
+
+function addDescBlock(){
+  const title = prompt("描述区标题：","备注");
+  if(title === null) return;
+  const block = `<div class="desc-block">
+    <span class="desc-title">${title}</span>
+    在这里填写详细描述、备注、说明内容……
+  </div><br>`;
+  document.execCommand('insertHTML',false,block);
+}
+
+function importTxt(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const text = e.target.result.replace(/\n/g,"<br>");
+    document.execCommand('insertHTML',false,`<div>${text}</div><br>`);
+  }
+  reader.readAsText(file);
+  input.value=null;
+}
+
+function saveLocal(){
+  localStorage.setItem('alu-data',editor.innerHTML);
+  alert("✅ 阿录：已保存");
+}
+function loadLocal(){
+  let res = localStorage.getItem('alu-data');
+  if(!res){alert("暂无保存记录");return;}
+  editor.innerHTML = res;
+}
+function clearAll(){
+  if(confirm("确定清空全部内容？")) editor.innerHTML = "";
+}
+function exportPDF(){
+  let opt = {margin:12,filename:"阿录记录.pdf",image:{type:'jpeg',quality:0.95},html2canvas:{scale:2}};
+  html2pdf().set(opt).from(editor).save();
+}
+async function exportImg(){
+  let canvasDom = await html2canvas(editor,{scale:2});
+  let link = document.createElement("a");
+  link.download = "阿录记录.png";
+  link.href = canvasDom.toDataURL("image/png");
+  link.click();
+}
+</script>
+</body>
+</html>
